@@ -77,6 +77,7 @@ type GatewayStatsPacket struct {
 	Latitude            *float64               `json:"latitude,omitempty"`
 	Longitude           *float64               `json:"longitude,omitempty"`
 	Altitude            *float64               `json:"altitude,omitempty"`
+	Temperature         *float64               `json:"temperature,omitempty"`
 	RXPacketsReceived   int                    `json:"rxPacketsReceived"`
 	RXPacketsReceivedOK int                    `json:"rxPacketsReceivedOK"`
 	TXPacketsReceived   int                    `json:"txPacketsReceived"`

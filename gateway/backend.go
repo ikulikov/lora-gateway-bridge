@@ -396,6 +396,7 @@ func newGatewayStatsPacket(mac lorawan.EUI64, stat Stat) gw.GatewayStatsPacket {
 		MAC:                 mac,
 		Latitude:            stat.Lati,
 		Longitude:           stat.Long,
+		Temperature:         stat.Temp,
 		RXPacketsReceived:   int(stat.RXNb),
 		RXPacketsReceivedOK: int(stat.RXOK),
 		TXPacketsReceived:   int(stat.DWNb),
