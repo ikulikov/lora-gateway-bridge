@@ -389,6 +389,15 @@ type RXPK struct {
 	LSNR float64     `json:"lsnr"` // Lora SNR ratio in dB (signed float, 0.1 dB precision)
 	Size uint16      `json:"size"` // RF packet payload size in bytes (unsigned integer)
 	Data string      `json:"data"` // Base64 encoded RF packet payload, padded
+	RSIG []RSIG      `json:"rsig,omitempty"`
+}
+
+// RSIG contain Gateway antenna signal data.
+type RSIG struct {
+	Ant int8         `json:"ant"`   // Antenna: 0 or 1
+	Chan uint8       `json:"chan"`  // Concentrator "IF" channel used for RX (unsigned integer)
+	RSSI int16       `json:"rssic"` // RSSI in dBm (signed integer, 1 dB precision)
+	LSNR float64     `json:"lsnr"`  // Lora SNR ratio in dB (signed float, 0.1 dB precision)
 }
 
 // Stat contains the status of the gateway.

@@ -249,6 +249,10 @@ func (b *Backend) handlePacket(addr *net.UDPAddr, data []byte) error {
 		"protocol_version": data[0],
 	}).Info("gateway: received udp packet from gateway")
 
+	log.WithFields(log.Fields{
+		"data_base64": base64.StdEncoding.EncodeToString(data),
+	}).Info("gateway: received udp packet from gateway")
+
 	switch pt {
 	case PushData:
 		return b.handlePushData(addr, data)
@@ -418,6 +422,11 @@ func newRXPacketFromRXPK(mac lorawan.EUI64, rxpk RXPK) (gw.RXPacketBytes, error)
 		return gw.RXPacketBytes{}, fmt.Errorf("gateway: could not base64 decode data: %s", err)
 	}
 
+	rsig, err := newRSIGInfosFromRSIG(rxpk.RSIG)
+	if err != nil {
+		return gw.RXPacketBytes{}, fmt.Errorf("gateway: could not transform RSIG from RX Packet: %s", err)
+	}
+
 	rxPacket := gw.RXPacketBytes{
 		PHYPayload: b,
 		RXInfo: gw.RXInfo{
@@ -433,9 +442,27 @@ func newRXPacketFromRXPK(mac lorawan.EUI64, rxpk RXPK) (gw.RXPacketBytes, error)
 			RSSI:      int(rxpk.RSSI),
 			LoRaSNR:   rxpk.LSNR,
 			Size:      int(rxpk.Size),
+			RSIG:      rsig,
 		},
 	}
 	return rxPacket, nil
+}
+
+func newRSIGInfosFromRSIG(rsig []RSIG) ([]gw.RSIGInfo, error) {
+	if rsig != nil {
+		rsigInfos := []gw.RSIGInfo{}
+		for i := 0; i<len(rsig) ;i++ {
+			rsigInfo := gw.RSIGInfo{
+				Antenna: int(rsig[i].Ant),
+				Channel: int(rsig[i].Chan),
+				RSSI:    int(rsig[i].RSSI),
+				LoRaSNR: rsig[i].LSNR,
+			}
+			rsigInfos = append(rsigInfos,rsigInfo)
+		}
+		return rsigInfos, nil
+	}
+	return nil, nil
 }
 
 // newTXPKFromTXPacket transforms a gw.TXPacketBytes into a Semtech

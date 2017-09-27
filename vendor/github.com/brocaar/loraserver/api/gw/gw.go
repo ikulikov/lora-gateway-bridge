@@ -34,6 +34,14 @@ type RXInfo struct {
 	LoRaSNR   float64       `json:"loRaSNR"`        // LoRa signal-to-noise ratio in dB
 	Size      int           `json:"size"`           // packet payload size
 	DataRate  band.DataRate `json:"dataRate"`       // RX datarate (either LoRa or FSK)
+	RSIG []RSIGInfo         `json:"rsig,omitempty"`
+}
+
+type RSIGInfo struct {
+	Antenna int          `json:"antenna"`  // Antenna: 0 or 1
+	Channel int          `json:"channel"`  // Concentrator "IF" channel used for RX (unsigned integer)
+	RSSI    int          `json:"rssi"`     // RSSI in dBm (signed integer, 1 dB precision)
+	LoRaSNR float64      `json:"loRaSNR"`  // Lora SNR ratio in dB (signed float, 0.1 dB precision)
 }
 
 // TXPacket contains the PHYPayload which should be send to the
