@@ -143,9 +143,9 @@ func (p *PushACKPacket) UnmarshalBinary(data []byte) error {
 
 // PullDataPacket is used by the gateway to poll data from the server.
 type PullDataPacket struct {
-	ProtocolVersion uint8
-	RandomToken     uint16
-	GatewayMAC      [8]byte
+	ProtocolVersion uint8				`json:"protocolVersion"`
+	RandomToken     uint16				`json:"randomToken"`
+	GatewayMAC      lorawan.EUI64       `json:"mac"`
 }
 
 // MarshalBinary marshals the object in binary form.

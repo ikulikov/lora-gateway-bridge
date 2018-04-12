@@ -83,6 +83,7 @@ type Backend struct {
 	conn         *net.UDPConn
 	rxChan       chan gw.RXPacketBytes
 	statsChan    chan gw.GatewayStatsPacket
+	pingChan	 chan PullDataPacket
 	udpSendChan  chan udpPacket
 	closed       bool
 	gateways     gateways
@@ -107,6 +108,7 @@ func NewBackend(bind string, onNew func(lorawan.EUI64) error, onDelete func(lora
 		conn:         conn,
 		rxChan:       make(chan gw.RXPacketBytes),
 		statsChan:    make(chan gw.GatewayStatsPacket),
+		pingChan:     make(chan PullDataPacket),
 		udpSendChan:  make(chan udpPacket),
 		gateways: gateways{
 			gateways: make(map[lorawan.EUI64]gateway),
@@ -166,6 +168,11 @@ func (b *Backend) RXPacketChan() chan gw.RXPacketBytes {
 // StatsChan returns the channel containg the received gateway stats.
 func (b *Backend) StatsChan() chan gw.GatewayStatsPacket {
 	return b.statsChan
+}
+
+// PingChan returns the channel containg the received gateway pull data.
+func (b *Backend) PingChan() chan PullDataPacket {
+	return b.pingChan
 }
 
 // Send sends the given packet to the gateway.
@@ -292,6 +299,13 @@ func (b *Backend) handlePullData(addr *net.UDPAddr, data []byte) error {
 		addr: addr,
 		data: bytes,
 	}
+
+	log.WithFields(log.Fields{
+		"addr": addr,
+		"mac":  p.GatewayMAC,
+	}).Info("gateway: pull data packet received")
+	b.pingChan <- p
+
 	return nil
 }
 

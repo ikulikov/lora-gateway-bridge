@@ -69,6 +69,14 @@ func run(c *cli.Context) error {
 	}()
 
 	go func() {
+		for pullData := range gw.PingChan() {
+			if err := pubsub.PublishGatewayPullData(pullData.GatewayMAC, pullData); err != nil {
+				log.Errorf("could not publish PullDataPacket: %s", err)
+			}
+		}
+	}()
+
+	go func() {
 		for txPacket := range pubsub.TXPacketChan() {
 			if err := gw.Send(txPacket); err != nil {
 				log.Errorf("could not send TXPacket: %s", err)
