@@ -4,8 +4,11 @@ import (
 	"errors"
 	"testing"
 	"time"
+	"encoding/json"
 
 	. "github.com/smartystreets/goconvey/convey"
+	"regexp"
+	"fmt"
 )
 
 func TestDatR(t *testing.T) {
@@ -144,6 +147,39 @@ func TestPushDataPacket(t *testing.T) {
 			})
 		})
 	})
+}
+
+func TestPushDataPacketWithTempC(t *testing.T) {
+	Convey("Given the json with temp value containing 'C'", t, func() {
+		jsonStr := "{\"stat\":{\"time\":\"2017-09-26 18:06:21 GMT\",\"boot\":\"2017-09-26 18:06:21 GMT\",\"rxnb\":6," +
+			"\"rxok\":5,\"rxfw\":5,\"ackr\":100.0,\"dwnb\":0,\"txnb\":0,\"lmok\":0,\"lmst\":0,\"lmnw\":0," +
+			"\"temp\":50.812500C,\"fpga\":82,\"hal\":\"3.5.2-SEMTECH\"}}"
+
+		re := regexp.MustCompile("(\"temp\":[0-9|.]+C,)")
+
+		index := re.FindStringIndex(jsonStr)
+		if (index != nil) {
+			tempCVal := jsonStr[index[0]:index[1]]
+			fmt.Printf("TempCVal: [%s]", tempCVal)
+			fmt.Println();
+			formattedTempCVal := tempCVal[0:len(tempCVal)-2] + ","
+			fmt.Printf("formattedTempCVal: [%s]", formattedTempCVal)
+			fmt.Println();
+			formattedJSON := jsonStr[0:index[0]] + formattedTempCVal + jsonStr[index[1]:len(jsonStr)]
+			fmt.Printf("formattedJson: [%s]", formattedJSON)
+			fmt.Println();
+			data := []byte(formattedJSON)
+			var payload PushDataPayload
+			err := json.Unmarshal(data, &payload)
+			if err != nil {
+				fmt.Println("error:", err)
+			}
+			fmt.Printf("%+v", payload)
+			fmt.Println();
+			fmt.Printf("%+v", payload.Stat)
+		}
+
+	});
 }
 
 func TestPushACKPacket(t *testing.T) {

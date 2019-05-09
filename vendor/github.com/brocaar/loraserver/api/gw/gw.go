@@ -37,8 +37,16 @@ type RXInfo struct {
 	LoRaSNR           float64       `json:"loRaSNR"`                     // LoRa signal-to-noise ratio in dB
 	Size              int           `json:"size"`                        // packet payload size
 	DataRate          band.DataRate `json:"dataRate"`                    // RX datarate (either LoRa or FSK)
-	Board             int           `json:"board"`                       // Concentrator board used for RX
-	Antenna           int           `json:"antenna"`                     // Antenna number on which signal has been received
+	RSIG              []RSIGInfo    `json:"rsig,omitempty"`
+	Board             int           `json:"board"`   					 // Concentrator board used for RX
+	Antenna           int           `json:"antenna"` // Antenna number on which signal has been received
+}
+
+type RSIGInfo struct {
+	Antenna  int     	`json:"antenna"` // Antenna: 0 or 1
+	Channel int     	`json:"channel"` // Concentrator "IF" channel used for RX (unsigned integer)
+	RSSI     int     	`json:"rssi"`    // RSSI in dBm (signed integer, 1 dB precision)
+	LoRaSNR  float64 	`json:"loRaSNR"` // Lora SNR ratio in dB (signed float, 0.1 dB precision)
 }
 
 // TXPacket contains the PHYPayload which should be send to the
@@ -103,6 +111,7 @@ type GatewayStatsPacket struct {
 	Latitude            *float64               `json:"latitude,omitempty"`
 	Longitude           *float64               `json:"longitude,omitempty"`
 	Altitude            *float64               `json:"altitude,omitempty"`
+	Temperature         *float64               `json:"temperature,omitempty"`
 	RXPacketsReceived   int                    `json:"rxPacketsReceived"`
 	RXPacketsReceivedOK int                    `json:"rxPacketsReceivedOK"`
 	TXPacketsReceived   int                    `json:"txPacketsReceived"`

@@ -8,8 +8,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/brocaar/lora-gateway-bridge/backend/mqttpubsub"
-	"github.com/brocaar/lora-gateway-bridge/gateway"
+	"github.com/ikulikov/lora-gateway-bridge/backend/mqttpubsub"
+	"github.com/ikulikov/lora-gateway-bridge/gateway"
 	"github.com/brocaar/lorawan"
 	"github.com/codegangsta/cli"
 	log "github.com/sirupsen/logrus"
@@ -64,6 +64,14 @@ func run(c *cli.Context) error {
 		for stats := range gw.StatsChan() {
 			if err := pubsub.PublishGatewayStats(stats.MAC, stats); err != nil {
 				log.Errorf("could not publish GatewayStatsPacket: %s", err)
+			}
+		}
+	}()
+
+	go func() {
+		for pullData := range gw.PingChan() {
+			if err := pubsub.PublishGatewayPullData(pullData.GatewayMAC, pullData); err != nil {
+				log.Errorf("could not publish PullDataPacket: %s", err)
 			}
 		}
 	}()

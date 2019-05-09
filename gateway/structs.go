@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"regexp"
 
 	"github.com/brocaar/lorawan"
 )
@@ -87,8 +88,24 @@ func (p *PushDataPacket) UnmarshalBinary(data []byte) error {
 	for i := 0; i < 8; i++ {
 		p.GatewayMAC[i] = data[4+i]
 	}
+	return json.Unmarshal(validatePushDataJSON(data[12:]), &p.Payload)
+}
 
-	return json.Unmarshal(data[12:], &p.Payload)
+func validatePushDataJSON(data []byte) ([]byte) {
+	if data != nil {
+		jsonStr := string(data)
+		re := regexp.MustCompile("(\"temp\":[0-9|.]+C,)")
+		tempCIndex := re.FindStringIndex(jsonStr)
+		if (tempCIndex != nil) {
+			tempCVal := jsonStr[tempCIndex[0]:tempCIndex[1]]
+			formattedTempCVal := tempCVal[0:len(tempCVal)-2] + ","
+			formattedJSON := jsonStr[0:tempCIndex[0]] + formattedTempCVal + jsonStr[tempCIndex[1]:len(jsonStr)]
+			return []byte(formattedJSON)
+		}
+		return data
+
+	}
+	return nil
 }
 
 // PushACKPacket is used by the server to acknowledge immediately all the
@@ -126,9 +143,9 @@ func (p *PushACKPacket) UnmarshalBinary(data []byte) error {
 
 // PullDataPacket is used by the gateway to poll data from the server.
 type PullDataPacket struct {
-	ProtocolVersion uint8
-	RandomToken     uint16
-	GatewayMAC      [8]byte
+	ProtocolVersion uint8				`json:"protocolVersion"`
+	RandomToken     uint16				`json:"randomToken"`
+	GatewayMAC      lorawan.EUI64       `json:"mac"`
 }
 
 // MarshalBinary marshals the object in binary form.
@@ -414,6 +431,7 @@ type Stat struct {
 	ACKR float64      `json:"ackr"` // Percentage of upstream datagrams that were acknowledged
 	DWNb uint32       `json:"dwnb"` // Number of downlink datagrams received (unsigned integer)
 	TXNb uint32       `json:"txnb"` // Number of packets emitted (unsigned integer)
+	Temp *float64     `json:"temp"` // Temperature
 }
 
 // TXPK contains a RF packet to be emitted and associated metadata.

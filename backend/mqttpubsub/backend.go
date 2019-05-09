@@ -1,6 +1,7 @@
 package mqttpubsub
 
 import (
+	"github.com/ikulikov/lora-gateway-bridge/gateway"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
@@ -129,6 +130,12 @@ func (b *Backend) PublishGatewayStats(mac lorawan.EUI64, stats gw.GatewayStatsPa
 func (b *Backend) PublishGatewayTXAck(mac lorawan.EUI64, ack gw.TXAck) error {
 	topic := fmt.Sprintf("gateway/%s/ack", mac.String())
 	return b.publish(topic, ack)
+}
+
+// PublishGatewayPullData publishes a PullDataPacket to the MQTT broker.
+func (b *Backend) PublishGatewayPullData(mac lorawan.EUI64, pullData gateway.PullDataPacket) error {
+	topic := fmt.Sprintf("gateway/%s/ping", mac.String())
+	return b.publish(topic, pullData)
 }
 
 func (b *Backend) publish(topic string, v interface{}) error {

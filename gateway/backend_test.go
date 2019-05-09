@@ -677,6 +677,9 @@ func TestNewRXPacketFromRXPK(t *testing.T) {
 					Size:     16,
 					Antenna:  1,
 					Board:    2,
+					RSIG: []gw.RSIGInfo{
+						{Antenna: 1, Channel: 3, RSSI: -50, LoRaSNR: 1.5}, gw.RSIGInfo{Antenna: 2, Channel: 3, RSSI: -30, LoRaSNR: 2},
+					},
 				})
 
 				So(rxPackets[1].PHYPayload, ShouldResemble, []byte{1, 2, 3, 4})
@@ -700,6 +703,88 @@ func TestNewRXPacketFromRXPK(t *testing.T) {
 					Size:     16,
 					Antenna:  2,
 					Board:    2,
+					RSIG: []gw.RSIGInfo{
+						{Antenna: 1, Channel: 3, RSSI: -50, LoRaSNR: 1.5}, gw.RSIGInfo{Antenna: 2, Channel: 3, RSSI: -30, LoRaSNR: 2},
+					},
+				})
+			})
+		})
+	})
+}
+
+func TestNewRXPacketFromRXPKWithRSIG(t *testing.T) {
+	Convey("Given a (Semtech) RXPK and gateway MAC", t, func() {
+		now := time.Now().UTC()
+		nowCompact := CompactTime(now)
+		rxpk := RXPK{
+			Time: &nowCompact,
+			Tmst: 708016819,
+			Freq: 868.5,
+			Chan: 2,
+			RFCh: 1,
+			Stat: 1,
+			Modu: "LORA",
+			DatR: DatR{LoRa: "SF7BW125"},
+			CodR: "4/5",
+			RSSI: -51,
+			LSNR: 7,
+			Size: 16,
+			Data: base64.StdEncoding.EncodeToString([]byte{1, 2, 3, 4}),
+			RSig: []RSig{
+				{
+					Ant:   0,
+					Chan:  52,
+					RSSIC: -85,
+					LSNR:  10.0,
+				},
+				{
+					Ant:   1,
+					Chan:  32,
+					RSSIC: -55,
+					LSNR:  8.0,
+				},
+			},
+		}
+		mac := [8]byte{1, 2, 3, 4, 5, 6, 7, 8}
+
+		Convey("When calling newRXPacketFromRXPK(", func() {
+			rxPacket, err := newRXPacketsFromRXPK(mac, rxpk)
+			So(err, ShouldBeNil)
+
+			Convey("Then all fields are set correctly", func() {
+				So(rxPacket[0].PHYPayload, ShouldResemble, []byte{1, 2, 3, 4})
+
+				So(rxPacket[0].RXInfo, ShouldResemble, gw.RXInfo{
+					MAC:       mac,
+					Time:      &now,
+					Timestamp: 708016819,
+					Frequency: 868500000,
+					Channel:   52,
+					RFChain:   1,
+					CRCStatus: 1,
+					DataRate: band.DataRate{
+						Modulation:   band.LoRaModulation,
+						SpreadFactor: 7,
+						Bandwidth:    125,
+					},
+					CodeRate: "4/5",
+					RSSI:     -85,
+					LoRaSNR:  10.0,
+					Size:     16,
+					RSIG: []gw.RSIGInfo{
+						{
+							Antenna: 0,
+							Channel: 52,
+							RSSI:    -85,
+							LoRaSNR: 10.0,
+						},
+						{
+							Antenna: 1,
+							Channel: 32,
+							RSSI:    -55,
+							LoRaSNR: 8.0,
+						},
+					},
 				})
 			})
 		})

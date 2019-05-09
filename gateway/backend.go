@@ -84,6 +84,7 @@ type Backend struct {
 	txAckChan    chan gw.TXAck
 	rxChan       chan gw.RXPacketBytes
 	statsChan    chan gw.GatewayStatsPacket
+	pingChan     chan PullDataPacket
 	udpSendChan  chan udpPacket
 	closed       bool
 	gateways     gateways
@@ -109,6 +110,7 @@ func NewBackend(bind string, onNew func(lorawan.EUI64) error, onDelete func(lora
 		txAckChan:    make(chan gw.TXAck),
 		rxChan:       make(chan gw.RXPacketBytes),
 		statsChan:    make(chan gw.GatewayStatsPacket),
+		pingChan:     make(chan PullDataPacket),
 		udpSendChan:  make(chan udpPacket),
 		gateways: gateways{
 			gateways: make(map[lorawan.EUI64]gateway),
@@ -168,6 +170,11 @@ func (b *Backend) RXPacketChan() chan gw.RXPacketBytes {
 // StatsChan returns the channel containing the received gateway stats.
 func (b *Backend) StatsChan() chan gw.GatewayStatsPacket {
 	return b.statsChan
+}
+
+// PingChan returns the channel containg the received gateway pull data.
+func (b *Backend) PingChan() chan PullDataPacket {
+	return b.pingChan
 }
 
 // TXAckChan returns the channel containing the TX acknowledgements
@@ -258,6 +265,10 @@ func (b *Backend) handlePacket(addr *net.UDPAddr, data []byte) error {
 		"protocol_version": data[0],
 	}).Info("gateway: received udp packet from gateway")
 
+	log.WithFields(log.Fields{
+		"data_base64": base64.StdEncoding.EncodeToString(data),
+	}).Info("gateway: received udp packet from gateway")
+
 	switch pt {
 	case PushData:
 		return b.handlePushData(addr, data)
@@ -297,6 +308,13 @@ func (b *Backend) handlePullData(addr *net.UDPAddr, data []byte) error {
 		addr: addr,
 		data: bytes,
 	}
+
+	log.WithFields(log.Fields{
+		"addr": addr,
+		"mac":  p.GatewayMAC,
+	}).Info("gateway: pull data packet received")
+	b.pingChan <- p
+
 	return nil
 }
 
@@ -396,6 +414,7 @@ func newGatewayStatsPacket(mac lorawan.EUI64, stat Stat) gw.GatewayStatsPacket {
 		MAC:                 mac,
 		Latitude:            stat.Lati,
 		Longitude:           stat.Long,
+		Temperature:         stat.Temp,
 		RXPacketsReceived:   int(stat.RXNb),
 		RXPacketsReceivedOK: int(stat.RXOK),
 		TXPacketsReceived:   int(stat.DWNb),
@@ -425,6 +444,11 @@ func newRXPacketsFromRXPK(mac lorawan.EUI64, rxpk RXPK) ([]gw.RXPacketBytes, err
 
 	var rxPackets []gw.RXPacketBytes
 
+	rsig, err := newRSIGInfosFromRSIG(rxpk.RSig)
+	if err != nil {
+		return []gw.RXPacketBytes{}, fmt.Errorf("gateway: could not transform RSIG from RX Packet: %s", err)
+	}
+
 	rxPacket := gw.RXPacketBytes{
 		PHYPayload: b,
 		RXInfo: gw.RXInfo{
@@ -440,6 +464,7 @@ func newRXPacketsFromRXPK(mac lorawan.EUI64, rxpk RXPK) ([]gw.RXPacketBytes, err
 			LoRaSNR:   rxpk.LSNR,
 			Size:      int(rxpk.Size),
 			Board:     int(rxpk.Brd),
+			RSIG:      rsig,
 		},
 	}
 
@@ -467,6 +492,23 @@ func newRXPacketsFromRXPK(mac lorawan.EUI64, rxpk RXPK) ([]gw.RXPacketBytes, err
 	}
 
 	return rxPackets, nil
+}
+
+func newRSIGInfosFromRSIG(rsig []RSig) ([]gw.RSIGInfo, error) {
+	if rsig != nil {
+		rsigInfos := []gw.RSIGInfo{}
+		for i := 0; i < len(rsig); i++ {
+			rsigInfo := gw.RSIGInfo{
+				Antenna: int(rsig[i].Ant),
+				Channel: int(rsig[i].Chan),
+				RSSI:    int(rsig[i].RSSIC),
+				LoRaSNR: rsig[i].LSNR,
+			}
+			rsigInfos = append(rsigInfos, rsigInfo)
+		}
+		return rsigInfos, nil
+	}
+	return nil, nil
 }
 
 // newTXPKFromTXPacket transforms a gw.TXPacketBytes into a Semtech
